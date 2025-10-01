@@ -1,55 +1,49 @@
-from langchain.document_loaders import PyPDFLoader, DirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.schema import Document
-from typing import List
+# src/helper.py
 
-def load_pdf_files(data):
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document
+
+
+def load_pdf_files(data_dir: str):
+    """
+    Load all PDF files from a given directory.
+    """
     loader = DirectoryLoader(
-        data,
+        data_dir,
         glob="*.pdf",
         loader_cls=PyPDFLoader,
     )
-
     documents = loader.load()
     return documents
 
 
-
-def filter_to_minimal_docs(docs: List[Document]) -> List[Document]:
+def filter_to_minimal_docs(docs: list[Document]) -> list[Document]:
     """
-    Given a list of Document objects, return a new list containing only the first 10 documents. 
+    Return simplified Document objects with only source metadata.
     """
-    minimal_docs: List[Document] = []
+    minimal_docs = []
     for doc in docs:
         src = doc.metadata.get("source")
         minimal_docs.append(
-            Document(
-                page_content=doc.page_content,
-                metadata={"source": src}
-            )
+            Document(page_content=doc.page_content, metadata={"source": src})
         )
     return minimal_docs
 
 
-
-def text_split(mininal_docs):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=20,
-    )
-    texts_chunk = text_splitter.split_documents(mininal_docs)
-    return texts_chunk
-
-
+def text_split(minimal_docs):
+    """
+    Split documents into chunks for embeddings.
+    """
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=20)
+    return text_splitter.split_documents(minimal_docs)
 
 
 def download_embeddings():
     """
-    Download the embeddings model from HuggingFace and return the embeddings object.
+    Load HuggingFace embedding model for vector search.
     """
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
-    embeddings = HuggingFaceEmbeddings(
-        model_name=model_name,
-    )
+    embeddings = HuggingFaceEmbeddings(model_name=model_name)
     return embeddings
